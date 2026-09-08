@@ -281,6 +281,8 @@ const GUID = "70bb2ec1-f19e-46b5-b49a-942e6b96ebae";
 const HOME_CONTAINER_SELECTOR = "#indexPage:not(.hide) #homeTab.is-active .homeSectionsContainer";
 const EDITORS_CHOICE_ADDED_CLASS = "editorsChoiceAdded";
 const EDITORS_CHOICE_LOADING_CLASS = "editorsChoiceLoading";
+const initializingContainers = new WeakSet();
+const initializedContainers = new WeakSet();
 
 /* ===== Utils ===== */
 function shuffle(input) {
@@ -445,28 +447,61 @@ function renderNormalSlide(item, data, baseUrl) {
 async function setup() {
     console.log("Attempting creation of editors choice slider.");
 
-    const containers = Array.from(document.querySelectorAll(HOME_CONTAINER_SELECTOR)).filter((element) => (
-        !element.classList.contains(EDITORS_CHOICE_ADDED_CLASS)
-        && !element.classList.contains(EDITORS_CHOICE_LOADING_CLASS)
-    ));
+    // Claim each container synchronously. setup() can be scheduled again while
+    // Splide is loading, so waiting before setting this marker can render the
+    // same slider multiple times.
+    const containers = Array.from(document.querySelectorAll(HOME_CONTAINER_SELECTOR)).filter((element) => {
+        if (element.querySelector(":scope > .editorsChoiceContainer")) {
+            initializedContainers.add(element);
+            element.classList.add(EDITORS_CHOICE_ADDED_CLASS);
+            return false;
+        }
+
+        if (initializingContainers.has(element) || initializedContainers.has(element)) return false;
+        if (element.classList.contains(EDITORS_CHOICE_LOADING_CLASS)) return false;
+
+        initializingContainers.add(element);
+        element.classList.add(EDITORS_CHOICE_LOADING_CLASS);
+        return true;
+    });
     if (!containers.length) return;
 
     try {
         await ensureSplideLoaded();
     } catch (e) {
+        for (const elem of containers) {
+            initializingContainers.delete(elem);
+            elem.classList.remove(EDITORS_CHOICE_LOADING_CLASS);
+        }
         console.warn("Editors Choice: Splide failed to load.", e);
         return;
     }
 
     for (const elem of containers) {
+        if (!elem.isConnected || !elem.matches(HOME_CONTAINER_SELECTOR)) {
+            initializingContainers.delete(elem);
+            elem.classList.remove(EDITORS_CHOICE_LOADING_CLASS);
+            continue;
+        }
+
         console.log("Fetching favourites data from API...");
-        elem.classList.add(EDITORS_CHOICE_LOADING_CLASS);
+        let containerElem;
 
         ApiClient.fetch({ url: ApiClient.getUrl("/EditorsChoice/favourites"), type: "GET" })
             .then((response) => response.json())
             .then((data) => {
+                if (!elem.isConnected || !elem.matches(HOME_CONTAINER_SELECTOR)) return;
+
+                const existingContainer = elem.querySelector(":scope > .editorsChoiceContainer");
+                if (existingContainer) {
+                    initializedContainers.add(elem);
+                    elem.classList.add(EDITORS_CHOICE_ADDED_CLASS);
+                    return;
+                }
+
                 if (data.hideOnTvLayout && document.documentElement.classList.contains("layout-tv")) {
                     console.log("Editors Choice: hidden on TV layout by configuration.");
+                    initializedContainers.add(elem);
                     elem.classList.add(EDITORS_CHOICE_ADDED_CLASS);
                     return;
                 }
@@ -475,7 +510,7 @@ async function setup() {
                 const template = document.createElement("template");
                 template.innerHTML = container.trim();
                 const content = template.content.cloneNode(true);
-                const containerElem = content.querySelector(".editorsChoiceContainer");
+                containerElem = content.querySelector(".editorsChoiceContainer");
                 const containerId = `editorsChoice-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
                 containerElem.id = containerId;
@@ -510,8 +545,6 @@ async function setup() {
                     list.insertAdjacentHTML("beforeend", html);
                 }
 
-                elem.classList.add(EDITORS_CHOICE_ADDED_CLASS);
-
                 // Toggle autoplay control visibility.
                 const playPauseBtn = containerElem.querySelector(".editorsChoicePlayPause");
                 if (playPauseBtn) playPauseBtn.style.display = data.autoplay ? "" : "none";
@@ -525,12 +558,20 @@ async function setup() {
                     keyboard: true,
                     height: `${data.bannerHeight + (data.useHeroLayout ? 180 : 0)}px`, // Add 80px to the banner image height in hero mode to compensate for navbar overlay
                 }).mount();
+
+                initializedContainers.add(elem);
+                elem.classList.add(EDITORS_CHOICE_ADDED_CLASS);
             })
             .catch((e) => {
+                containerElem?.remove();
+                initializedContainers.delete(elem);
                 elem.classList.remove(EDITORS_CHOICE_ADDED_CLASS);
                 console.warn("Editors Choice: failed to fetch/render.", e);
             })
-            .finally(() => elem.classList.remove(EDITORS_CHOICE_LOADING_CLASS));
+            .finally(() => {
+                initializingContainers.delete(elem);
+                elem.classList.remove(EDITORS_CHOICE_LOADING_CLASS);
+            });
     }
 }
 
