@@ -173,6 +173,31 @@ public class EditorsChoiceActivityController : ControllerBase
 
             }
 
+            if (modes.Contains("LIBRARIES"))
+            {
+                Guid[] libraryIds = _config.FilteredLibraries
+                    .Select(id => Guid.TryParse(id, out Guid libraryId) ? libraryId : Guid.Empty)
+                    .Where(id => id != Guid.Empty)
+                    .ToArray();
+
+                if (libraryIds.Length > 0)
+                {
+                    query = new InternalItemsQuery(activeUser)
+                    {
+                        AncestorIds = libraryIds,
+                        IncludeItemTypes = [BaseItemKind.Series, BaseItemKind.Movie],
+                        MinCommunityRating = minimumRating,
+                        MinCriticRating = minimumCriticRating,
+                        MaxParentalRating = parentalRatingScore,
+                        HasParentalRating = mustHaveParentRating,
+                        OrderBy = new[] { (ItemSortBy.Random, SortOrder.Ascending) },
+                        IsPlayed = _config.ShowPlayed ? null : false
+                    };
+                    query.Limit = _config.RandomMediaCount * 2;
+                    result.AddRange(PrepareResult(query, activeUser));
+                }
+            }
+
             if (modes.Contains("COLLECTIONS"))
             {
                 List<string> remainingCollections = _config.SelectedCollections.ToList();

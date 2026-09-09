@@ -167,6 +167,14 @@
 
                     <div class="checkboxContainer checkboxContainer-withDescription">
                         <label class="emby-checkbox-label">
+                            <input is="emby-checkbox" type="checkbox" id="LibrariesMode" name="modes" />
+                            <span class="checkboxLabel">Libraries</span>
+                        </label>
+                        <div class="fieldDescription">Shows items from one or more selected Jellyfin libraries.</div>
+                    </div>
+
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label class="emby-checkbox-label">
                             <input is="emby-checkbox" type="checkbox" id="CollectionsMode" name="modes" />
                             <span class="checkboxLabel">Collections</span>
                         </label>
@@ -204,6 +212,12 @@
                         <h3 class="checkboxListLabel">Show items from these collections:</h3>
                         <div id="CollectionsList" class="checkboxList"></div>
                         <p>One collection will be shown at a time across the slider. If multiple are checked below, one of them will be randomly chosen each time it loads.</p>
+                    </div>
+
+                    <div id="LibraryList-container" style="display:none;">
+                        <h3 class="checkboxListLabel">Show items from these libraries:</h3>
+                        <div id="LibraryList" class="checkboxList"></div>
+                        <p>Items are selected automatically from all checked movie, TV, and mixed-content libraries. With none checked, all accessible libraries are used.</p>
                     </div>
 
                     <hr />
@@ -402,6 +416,7 @@
                             : [config.Mode];
                         $('#FavouritesMode').first().prop('checked', configuredModes.includes('FAVOURITES'));
                         $('#RandomMode').first().prop('checked', configuredModes.includes('RANDOM'));
+                        $('#LibrariesMode').first().prop('checked', configuredModes.includes('LIBRARIES'));
                         $('#CollectionsMode').first().prop('checked', configuredModes.includes('COLLECTIONS'));
                         $('#NewMode').first().prop('checked', configuredModes.includes('NEW'));
                         $('#RandomMediaCount').val(config.RandomMediaCount);
@@ -429,6 +444,9 @@
                         }
                         if (configuredModes.includes('COLLECTIONS')) {
                             $('#CollectionsList-container').show();
+                        }
+                        if (configuredModes.includes('LIBRARIES')) {
+                            $('#LibraryList-container').show();
                         }
                         if (configuredModes.includes('NEW')) {
                             $('#NewTimeLimit-container').show();
@@ -463,12 +481,13 @@
                         });
 
                         // Populate libraries and collections checkboxes
-                        const libraryTypes = ["tvshows", "movies"];
+                        const libraryTypes = ["tvshows", "movies", "mixed"];
+                        const configuredLibraries = Array.isArray(config.FilteredLibraries) ? config.FilteredLibraries : [];
                         $('#LibraryList label, #CollectionsList label').remove();
                         ApiClient.getItems().then(function (data) {
                             for (var item of data.Items) {
                                 if (libraryTypes.includes(item.CollectionType)) {
-                                    var checked = config.FilteredLibraries.includes(item.Id) ? 'checked' : '';
+                                    var checked = configuredLibraries.includes(item.Id) ? 'checked' : '';
                                     var checkboxItem = '<label class="emby-checkbox-label"><input is="emby-checkbox" type="checkbox" data-id="'+item.Id+'" '+checked+'><span class="checkboxLabel">'+item.Name+'</span></label>';
                                     $('#LibraryList').append(checkboxItem);
 
@@ -566,6 +585,7 @@
                         var selectedModes = [];
                         if ($('#FavouritesMode').first().is(':checked')) selectedModes.push('FAVOURITES');
                         if ($('#RandomMode').first().is(':checked')) selectedModes.push('RANDOM');
+                        if ($('#LibrariesMode').first().is(':checked')) selectedModes.push('LIBRARIES');
                         if ($('#CollectionsMode').first().is(':checked')) selectedModes.push('COLLECTIONS');
                         if ($('#NewMode').first().is(':checked')) selectedModes.push('NEW');
                         if (!selectedModes.length) selectedModes.push('RANDOM');
@@ -626,6 +646,7 @@
                 $('input[name="modes"], #EnableAutoplay').on('change', function() {
                     $('#EditorUserId-container').toggle($('#FavouritesMode').is(':checked'));
                     $('#CollectionsList-container').toggle($('#CollectionsMode').is(':checked'));
+                    $('#LibraryList-container').toggle($('#LibrariesMode').is(':checked'));
                     $('#NewTimeLimit-container').toggle($('#NewMode').is(':checked'));
                     $('#AutoplayInterval-container').toggle($('#EnableAutoplay').is(':checked'));
                 });
