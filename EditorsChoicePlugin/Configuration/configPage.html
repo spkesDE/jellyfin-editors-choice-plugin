@@ -147,70 +147,38 @@
 
                     <hr />
                     <h2>Mode</h2>
-                    <div class="inputContainer">
-                        <label class="radio-label-block mdl-radio show-focus">
-                            <input type="radio" is="emby-radio" id="FavouritesMode" name="mode" value="FavouritesMode" class="mdl-radio__button" />
-                            <div class="mdl-radio__circles">
-                                <svg>
-                                    <defs>
-                                        <clipPath id="cutoff-fav"><circle cx="50%" cy="50%" r="50%"></circle></clipPath>
-                                    </defs>
-                                    <circle class="mdl-radio__outer-circle" cx="50%" cy="50%" r="50%" fill="none" stroke="currentcolor" stroke-width="0.26em" clip-path="url(#cutoff-fav)"></circle>
-                                    <circle class="mdl-radio__inner-circle" cx="50%" cy="50%" r="25%" fill="currentcolor"></circle>
-                                </svg>
-                                <div class="mdl-radio__focus-circle"></div>
-                            </div>
-                            <span class="radioButtonLabel mdl-radio__label">Favourites</span>
-                            <div class="fieldDescription">Shows items from the specified user's favourites</div>
-                        </label>
+                    <p>Select one or more sources. Results are combined, deduplicated, and limited by the maximum items setting.</p>
 
-                        <label class="radio-label-block mdl-radio show-focus">
-                            <input type="radio" is="emby-radio" id="RandomMode" name="mode" value="RandomMode" class="mdl-radio__button" />
-                            <div class="mdl-radio__circles">
-                                <svg>
-                                    <defs>
-                                        <clipPath id="cutoff-rand"><circle cx="50%" cy="50%" r="50%"></circle></clipPath>
-                                    </defs>
-                                    <circle class="mdl-radio__outer-circle" cx="50%" cy="50%" r="50%" fill="none" stroke="currentcolor" stroke-width="0.26em" clip-path="url(#cutoff-rand)"></circle>
-                                    <circle class="mdl-radio__inner-circle" cx="50%" cy="50%" r="25%" fill="currentcolor"></circle>
-                                </svg>
-                                <div class="mdl-radio__focus-circle"></div>
-                            </div>
-                            <span class="radioButtonLabel mdl-radio__label">Random</span>
-                            <div class="fieldDescription">Shows a random selection of items from your library</div>
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label class="emby-checkbox-label">
+                            <input is="emby-checkbox" type="checkbox" id="FavouritesMode" name="modes" />
+                            <span class="checkboxLabel">Favourites</span>
                         </label>
+                        <div class="fieldDescription">Shows items from the specified user's favourites.</div>
+                    </div>
 
-                        <label class="radio-label-block mdl-radio show-focus">
-                            <input type="radio" is="emby-radio" id="CollectionsMode" name="mode" value="CollectionsMode" class="mdl-radio__button" />
-                            <div class="mdl-radio__circles">
-                                <svg>
-                                    <defs>
-                                        <clipPath id="cutoff-col"><circle cx="50%" cy="50%" r="50%"></circle></clipPath>
-                                    </defs>
-                                    <circle class="mdl-radio__outer-circle" cx="50%" cy="50%" r="50%" fill="none" stroke="currentcolor" stroke-width="0.26em" clip-path="url(#cutoff-col)"></circle>
-                                    <circle class="mdl-radio__inner-circle" cx="50%" cy="50%" r="25%" fill="currentcolor"></circle>
-                                </svg>
-                                <div class="mdl-radio__focus-circle"></div>
-                            </div>
-                            <span class="radioButtonLabel mdl-radio__label">Collections</span>
-                            <div class="fieldDescription">Shows items from the specified collections</div>
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label class="emby-checkbox-label">
+                            <input is="emby-checkbox" type="checkbox" id="RandomMode" name="modes" />
+                            <span class="checkboxLabel">Random</span>
                         </label>
+                        <div class="fieldDescription">Shows a random selection of items from your library.</div>
+                    </div>
 
-                        <label class="radio-label-block mdl-radio show-focus">
-                            <input type="radio" is="emby-radio" id="NewMode" name="mode" value="NewMode" class="mdl-radio__button" />
-                            <div class="mdl-radio__circles">
-                                <svg>
-                                    <defs>
-                                        <clipPath id="cutoff-new"><circle cx="50%" cy="50%" r="50%"></circle></clipPath>
-                                    </defs>
-                                    <circle class="mdl-radio__outer-circle" cx="50%" cy="50%" r="50%" fill="none" stroke="currentcolor" stroke-width="0.26em" clip-path="url(#cutoff-new)"></circle>
-                                    <circle class="mdl-radio__inner-circle" cx="50%" cy="50%" r="25%" fill="currentcolor"></circle>
-                                </svg>
-                                <div class="mdl-radio__focus-circle"></div>
-                            </div>
-                            <span class="radioButtonLabel mdl-radio__label">New</span>
-                            <div class="fieldDescription">Shows only movies and shows with episodes that premiered recently</div>
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label class="emby-checkbox-label">
+                            <input is="emby-checkbox" type="checkbox" id="CollectionsMode" name="modes" />
+                            <span class="checkboxLabel">Collections</span>
                         </label>
+                        <div class="fieldDescription">Shows items from the specified collections.</div>
+                    </div>
+
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label class="emby-checkbox-label">
+                            <input is="emby-checkbox" type="checkbox" id="NewMode" name="modes" />
+                            <span class="checkboxLabel">New</span>
+                        </label>
+                        <div class="fieldDescription">Shows movies and shows with episodes that premiered recently.</div>
                     </div>
 
                     <div id="EditorUserId-container" class="selectContainer" style="display:none;">
@@ -438,10 +406,13 @@
                         //$('#EditorUserId').first().val(config.EditorUserId);
                         $('#FrontendInjectionMethod').val(config.FrontendInjectionMethod || 'automatic');
                         $('#ShowRandomMedia').first().prop('checked', config.ShowRandomMedia);
-                        $('#FavouritesMode').first().prop('checked', config.Mode == 'FAVOURITES');
-                        $('#RandomMode').first().prop('checked', config.Mode == 'RANDOM');
-                        $('#CollectionsMode').first().prop('checked', config.Mode == 'COLLECTIONS');
-                        $('#NewMode').first().prop('checked', config.Mode == 'NEW');
+                        var configuredModes = Array.isArray(config.Modes) && config.Modes.length
+                            ? config.Modes
+                            : [config.Mode];
+                        $('#FavouritesMode').first().prop('checked', configuredModes.includes('FAVOURITES'));
+                        $('#RandomMode').first().prop('checked', configuredModes.includes('RANDOM'));
+                        $('#CollectionsMode').first().prop('checked', configuredModes.includes('COLLECTIONS'));
+                        $('#NewMode').first().prop('checked', configuredModes.includes('NEW'));
                         $('#RandomMediaCount').val(config.RandomMediaCount);
                         $('#MinimumRating').val(config.MinimumRating);
                         $('#MinimumCriticRating').val(config.MinimumCriticRating);
@@ -464,11 +435,13 @@
                         $("#PlayButtonText").val(config.PlayButtonText);
                         $('#HideOnTvLayout').first().prop('checked', config.HideOnTvLayout);
 
-                        if (config.Mode == 'FAVOURITES') {
+                        if (configuredModes.includes('FAVOURITES')) {
                             $('#EditorUserId-container').show();
-                        } else if (config.Mode == 'COLLECTIONS') {
+                        }
+                        if (configuredModes.includes('COLLECTIONS')) {
                             $('#CollectionsList-container').show();
-                        } else if (config.Mode == "NEW") {
+                        }
+                        if (configuredModes.includes('NEW')) {
                             $('#NewTimeLimit-container').show();
                         }
 
@@ -605,20 +578,16 @@
                         config.TransitionEffect = $("#TransitionEffectSelect").val();
                         config.HeroBackdropPosition = $("#HeroBackdropPositionSelect").val();
 
-                        if ($('#FavouritesMode').first().is(':checked')) {
-                            config.Mode = "FAVOURITES";
-                            config.ShowRandomMedia = false;
-                        } else if ($('#RandomMode').first().is(':checked')) {
-                            config.Mode = "RANDOM";
-                            config.ShowRandomMedia = true;
-                        } else if ($('#CollectionsMode').first().is(':checked')) {
-                            config.Mode = "COLLECTIONS";
-                            config.ShowRandomMedia = false;
-                        } else if ($('#NewMode').first().is(':checked')) {
-                            config.Mode = "NEW";
-                            config.ShowRandomMedia = false;
+                        var selectedModes = [];
+                        if ($('#FavouritesMode').first().is(':checked')) selectedModes.push('FAVOURITES');
+                        if ($('#RandomMode').first().is(':checked')) selectedModes.push('RANDOM');
+                        if ($('#CollectionsMode').first().is(':checked')) selectedModes.push('COLLECTIONS');
+                        if ($('#NewMode').first().is(':checked')) selectedModes.push('NEW');
+                        if (!selectedModes.length) selectedModes.push('RANDOM');
 
-                        }
+                        config.Modes = selectedModes;
+                        config.Mode = selectedModes[0];
+                        config.ShowRandomMedia = selectedModes.includes('RANDOM');
 
                         let randomMediaCount = $('#RandomMediaCount').first().val();
                         if (randomMediaCount < 1 || randomMediaCount == '') {
@@ -669,7 +638,7 @@
                     return false;
                 });
 
-                $('input[name="mode"], #EnableAutoplay').on('change', function() {
+                $('input[name="modes"], #EnableAutoplay').on('change', function() {
                     $('#EditorUserId-container').toggle($('#FavouritesMode').is(':checked'));
                     $('#CollectionsList-container').toggle($('#CollectionsMode').is(':checked'));
                     $('#NewTimeLimit-container').toggle($('#NewMode').is(':checked'));

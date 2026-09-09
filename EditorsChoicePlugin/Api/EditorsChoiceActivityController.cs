@@ -69,7 +69,6 @@ public class EditorsChoiceActivityController : ControllerBase
             InternalItemsQuery query;
             List<BaseItem> initialResult = [];
             List<BaseItem> result = [];
-            bool resultsEmpty = false;
             int? maximumParentRating = -2;
             int maximumParentRatingSubscore = 0;
             bool? mustHaveParentRating = null;
@@ -93,6 +92,14 @@ public class EditorsChoiceActivityController : ControllerBase
 
             Jellyfin.Database.Implementations.Entities.User? activeUser = _userManager.GetUserByName(name);
             if (activeUser == null) return NotFound();
+
+            HashSet<string> modes = (_config.Modes?.Length > 0 ? _config.Modes : [_config.Mode])
+                .Where(mode => !string.IsNullOrWhiteSpace(mode))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            if (modes.Count == 0)
+            {
+                modes.Add("RANDOM");
+            }
 
             // If the config is set to be user profile specific, then we need to set the rating to the user's max age rating.
             if (_config.MaximumParentRating == -2)
@@ -118,68 +125,60 @@ public class EditorsChoiceActivityController : ControllerBase
                 parentalRatingScore = new MediaBrowser.Model.Entities.ParentalRatingScore((int)maximumParentRating, maximumParentRatingSubscore);
             }
 
-            // If not showing random media, collect the editor user's favourited items
-            if (_config.Mode == "FAVOURITES")
+            // Collect the editor user's favourited items when that source is enabled.
+            if (modes.Contains("FAVOURITES"))
             {
 
-                // Use random fallback if no editor ID set
-                if (_config.EditorUserId == null || _config.EditorUserId == "" || _config.EditorUserId.Length < 16)
+                if (Guid.TryParse(_config.EditorUserId, out Guid editorUserId))
                 {
-                    resultsEmpty = true;
-                }
-                else
-                {
-                    Jellyfin.Database.Implementations.Entities.User? editorUser = _userManager.GetUserById(Guid.Parse(_config.EditorUserId));
+                    Jellyfin.Database.Implementations.Entities.User? editorUser = _userManager.GetUserById(editorUserId);
 
-                    // Get the favourites list
-                    query = new InternalItemsQuery(editorUser)
+                    if (editorUser != null)
                     {
-                        IsFavorite = true,
-                        IncludeItemsByName = true,
-                        IncludeItemTypes = [BaseItemKind.Series, BaseItemKind.Movie, BaseItemKind.Episode, BaseItemKind.Season], // Editor may have favourited individual episodes or seasons - we will handle this later
-                        MinCommunityRating = minimumRating,
-                        MinCriticRating = minimumCriticRating,
-                        MaxParentalRating = parentalRatingScore,
-                        HasParentalRating = mustHaveParentRating,
-                        OrderBy = new[] { (ItemSortBy.Random, SortOrder.Ascending) }
-                    };
-                    query.Limit = _config.RandomMediaCount * 2;
-                    initialResult = _libraryManager.GetItemList(query).ToList();
-
-                    // Get ids of items in the favourites list
-                    List<Guid> itemIds = new List<Guid>();
-                    foreach (var item in initialResult)
-                    {
-                        if (!itemIds.Contains(item.Id))
+                        // Read the editor's favourites, but never expose them directly.
+                        query = new InternalItemsQuery(editorUser)
                         {
-                            // Only include if active user has parental access to this item
-                            if (item.IsVisible(activeUser))
+                            IsFavorite = true,
+                            IncludeItemsByName = true,
+                            IncludeItemTypes = [BaseItemKind.Series, BaseItemKind.Movie, BaseItemKind.Episode, BaseItemKind.Season], // Editor may have favourited individual episodes or seasons - we will handle this later
+                            MinCommunityRating = minimumRating,
+                            MinCriticRating = minimumCriticRating,
+                            MaxParentalRating = parentalRatingScore,
+                            HasParentalRating = mustHaveParentRating,
+                            OrderBy = new[] { (ItemSortBy.Random, SortOrder.Ascending) }
+                        };
+                        query.Limit = _config.RandomMediaCount * 2;
+                        initialResult = _libraryManager.GetItemList(query).ToList();
+
+                        // Re-query only visible IDs as the active user. PrepareResult
+                        // performs a final visibility check after promoting episodes or seasons.
+                        List<Guid> itemIds = [];
+                        foreach (var item in initialResult)
+                        {
+                            if (!itemIds.Contains(item.Id) && item.IsVisible(activeUser))
                             {
                                 itemIds.Add(item.Id);
                             }
                         }
+
+                        query = new InternalItemsQuery(activeUser)
+                        {
+                            ItemIds = [.. itemIds],
+                            IncludeItemTypes = [BaseItemKind.Series, BaseItemKind.Movie, BaseItemKind.Episode, BaseItemKind.Season], // Editor may have favourited individual episodes or seasons - we will handle this later
+                            IsPlayed = _config.ShowPlayed ? null : false
+                        };
+                        result.AddRange(PrepareResult(query, activeUser));
                     }
-
-                    // Query items from the active user to ensure access
-                    query = new InternalItemsQuery(activeUser)
-                    {
-                        ItemIds = [.. itemIds],
-                        IncludeItemTypes = [BaseItemKind.Series, BaseItemKind.Movie, BaseItemKind.Episode, BaseItemKind.Season], // Editor may have favourited individual episodes or seasons - we will handle this later
-                        IsPlayed = _config.ShowPlayed ? null : false
-                    };
-                    result = PrepareResult(query, activeUser);
-
-                    // If the result is empty (i.e. the active user doesn't have access to any of the items), fallback to random mode.
-                    resultsEmpty = result.Count == 0;
                 }
 
             }
 
-            if (_config.Mode == "COLLECTIONS")
+            if (modes.Contains("COLLECTIONS"))
             {
                 List<string> remainingCollections = _config.SelectedCollections.ToList();
+                List<BaseItem> collectionResult = [];
 
-                while (result.Count == 0 && remainingCollections.Count > 0)
+                while (collectionResult.Count == 0 && remainingCollections.Count > 0)
                 { // if a collection is totally inaccessible due to user visibility or excessive filters configured, we need to try another collection
                     int collectionR = new Random().Next(remainingCollections.Count);
                     string collectionId = remainingCollections[collectionR];
@@ -214,15 +213,14 @@ public class EditorsChoiceActivityController : ControllerBase
                             IsPlayed = _config.ShowPlayed ? null : false
                         };
                         query.Limit = _config.RandomMediaCount * 2;
-                        result = PrepareResult(query, activeUser);
+                        collectionResult = PrepareResult(query, activeUser);
                     }
-
-                    // If the result is empty (i.e. the active user doesn't have access to any of the items), fallback to random mode.
-                    resultsEmpty = result.Count == 0;
                 }
+
+                result.AddRange(collectionResult);
             }
 
-            if (_config.Mode == "NEW")
+            if (modes.Contains("NEW"))
             {
                 DateTime newEndDate = DateTime.Today.AddMonths(-1);
 
@@ -331,13 +329,12 @@ public class EditorsChoiceActivityController : ControllerBase
                 };
                 finalQuery.Limit = _config.RandomMediaCount;
 
-                result = PrepareResult(finalQuery, activeUser);
-
-                resultsEmpty = result.Count == 0;
+                result.AddRange(PrepareResult(finalQuery, activeUser));
             }
 
-            // If showing random media is enabled OR the results list is currently empty, collect a random selection from the entire library
-            if (_config.Mode == "RANDOM" || resultsEmpty)
+            // Explicit random mode contributes random items. If every configured
+            // source is empty, retain the existing random fallback behaviour.
+            if (modes.Contains("RANDOM") || result.Count == 0)
             {
 
                 // Get all shows and movies
@@ -352,8 +349,14 @@ public class EditorsChoiceActivityController : ControllerBase
                     IsPlayed = _config.ShowPlayed ? null : false
                 };
                 query.Limit = _config.RandomMediaCount * 2;
-                result = PrepareResult(query, activeUser);
+                result.AddRange(PrepareResult(query, activeUser));
             }
+
+            result = result
+                .DistinctBy(item => item.Id)
+                .OrderBy(_ => Random.Shared.Next())
+                .Take(_config.RandomMediaCount)
+                .ToList();
 
             // Build response
             response = new Dictionary<string, object>();

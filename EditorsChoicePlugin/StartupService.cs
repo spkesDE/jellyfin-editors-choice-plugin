@@ -37,6 +37,12 @@ public class StartupService : IScheduledTask
             _config.Mode = _config.ShowRandomMedia ? "RANDOM" : "FAVOURITES";
         }
 
+        // Preserve configurations created before combined modes were available.
+        if (_config.Modes == null || _config.Modes.Length == 0)
+        {
+            _config.Modes = [_config.Mode];
+        }
+
         string basePath = GetBasePath();
         if (!FrontendRegistration.TryRegisterConfigured(_config, _applicationPaths, basePath, _logger))
         {
