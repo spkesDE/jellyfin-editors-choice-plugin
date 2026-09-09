@@ -99,7 +99,22 @@ const container = `
     color: rgba(255, 255, 255, 0.8);
     text-decoration: none;
     background-position-y: 52%;
+    overflow: hidden;
+    position: relative;
   }
+
+  .editorsChoiceTrailer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    z-index: 0;
+  }
+
+  .editorsChoiceTrailer.is-playing { opacity: 1; }
 
   .editorsChoiceItemBanner:nth-child(odd) { background-position-y: 48%; }
 
@@ -122,6 +137,8 @@ const container = `
     padding: 30px;
     box-sizing: border-box;
     background: linear-gradient(90deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 60%, rgba(0,0,0,0) 100%);
+    position: relative;
+    z-index: 1;
   }
 
   /* ===== Content ===== */
@@ -344,6 +361,72 @@ function buildBannerSizeParam(reduceImageSizes) {
     return `?width=${w}`;
 }
 
+function buildBackgroundTrailer(item, data) {
+    if (!data.enableBackgroundTrailers || !item.localTrailerId) return "";
+    return `<video class="editorsChoiceTrailer" data-trailer-id="${item.localTrailerId}" muted loop playsinline preload="none" aria-hidden="true"></video>`;
+}
+
+function getTrailerStreamUrl(trailerId) {
+    return ApiClient.getUrl(`Videos/${trailerId}/stream`, {
+        Static: true,
+        MediaSourceId: trailerId,
+        DeviceId: ApiClient.deviceId(),
+        ApiKey: ApiClient.accessToken(),
+    });
+}
+
+function configureBackgroundTrailers(splide, containerElem) {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches || navigator.connection?.saveData) return;
+
+    let playTimer;
+    let pendingVideo;
+
+    const stopTrailer = (slide) => {
+        const video = slide?.querySelector?.(".editorsChoiceTrailer");
+        if (!video) return;
+        if (video === pendingVideo) {
+            clearTimeout(playTimer);
+            pendingVideo = null;
+        }
+        video.pause();
+        video.classList.remove("is-playing");
+        if (video.readyState > 0) video.currentTime = 0;
+    };
+
+    const startTrailer = (slide) => {
+        clearTimeout(playTimer);
+        const video = slide?.querySelector?.(".editorsChoiceTrailer");
+        if (!video) return;
+        pendingVideo = video;
+
+        playTimer = window.setTimeout(() => {
+            pendingVideo = null;
+            if (!slide.classList.contains("is-active") || document.hidden) return;
+            if (!video.src) video.src = getTrailerStreamUrl(video.dataset.trailerId);
+            video.play()
+                .then(() => {
+                    if (slide.classList.contains("is-active") && !document.hidden) {
+                        video.classList.add("is-playing");
+                    } else {
+                        stopTrailer(slide);
+                    }
+                })
+                .catch(() => video.classList.remove("is-playing"));
+        }, 1500);
+    };
+
+    splide.on("active", (slide) => startTrailer(slide.slide));
+    splide.on("inactive", (slide) => stopTrailer(slide.slide));
+
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+            containerElem.querySelectorAll(".editorsChoiceTrailer").forEach((video) => stopTrailer(video.closest(".splide__slide")));
+        } else {
+            startTrailer(containerElem.querySelector(".splide__slide.is-active"));
+        }
+    });
+}
+
 function ensureSplideLoaded() {
     return new Promise((resolve, reject) => {
         if (window.Splide) return resolve();
@@ -378,6 +461,7 @@ function renderHeroSlide(item, data, baseUrl) {
     const rating = buildRating(item);
     const logoOrTitle = buildLogoOrTitle(item, data.reduceImageSizes);
     const overview = buildOverview(item);
+    const trailer = buildBackgroundTrailer(item, data);
 
     let button = "";
 
@@ -403,6 +487,7 @@ function renderHeroSlide(item, data, baseUrl) {
      onclick="Emby.Page.showItem('${item.id}'); return false;"
      class="editorsChoiceItemBanner splide__slide">
     <div class="editorsChoiceBackdrop ${extraClass}" style="background-image:url('${backdropUrl}');"></div>
+    ${trailer}
     <div class="editorsChoiceContent">
       ${logoOrTitle}
       ${rating}
@@ -416,6 +501,7 @@ function renderNormalSlide(item, data, baseUrl) {
     const rating = buildRating(item);
     const logoOrTitle = buildLogoOrTitle(item, data.reduceImageSizes);
     const overview = buildOverview(item);
+    const trailer = buildBackgroundTrailer(item, data);
 
     const bannerSize = buildBannerSizeParam(data.reduceImageSizes);
     let button = "";
@@ -434,6 +520,7 @@ function renderNormalSlide(item, data, baseUrl) {
                  onclick="Emby.Page.showItem('${item.id}'); return false;"
                  class="editorsChoiceItemBanner splide__slide"
                  style="background-image:url('../Items/${item.id}/Images/Backdrop/0${bannerSize}');">
+                ${trailer}
                 <div>
                   ${logoOrTitle}
                   ${rating}
@@ -552,7 +639,7 @@ async function setup() {
                     arrow.style.display = data.showNavigationArrows ? "" : "none";
                 });
 
-                new Splide(containerElem.querySelector(".splide"), {
+                const splide = new Splide(containerElem.querySelector(".splide"), {
                     type: data.transitionEffect ?? "loop",
                     autoplay: !!data.autoplay,
                     rewind: true,
@@ -561,7 +648,9 @@ async function setup() {
                     arrows: !!data.showNavigationArrows,
                     keyboard: true,
                     height: `${data.bannerHeight + (data.useHeroLayout ? 180 : 0)}px`, // Add 80px to the banner image height in hero mode to compensate for navbar overlay
-                }).mount();
+                });
+                configureBackgroundTrailers(splide, containerElem);
+                splide.mount();
 
                 initializedContainers.add(elem);
                 elem.classList.add(EDITORS_CHOICE_ADDED_CLASS);

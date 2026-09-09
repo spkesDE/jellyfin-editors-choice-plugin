@@ -376,6 +376,15 @@ public class EditorsChoiceActivityController : ControllerBase
                     { "hasLogo", item.HasImage(MediaBrowser.Model.Entities.ImageType.Logo) }
                 };
 
+                if (_config.EnableBackgroundTrailers && item is IHasTrailers itemWithTrailers)
+                {
+                    BaseItem? localTrailer = itemWithTrailers.LocalTrailers.FirstOrDefault(trailer => trailer.IsVisible(activeUser));
+                    if (localTrailer != null)
+                    {
+                        itemObject.Add("localTrailerId", localTrailer.Id.ToString());
+                    }
+                }
+
                 if (_config.ShowDescription)
                 {
                     itemObject.Add("overview", item.Overview);
@@ -395,6 +404,7 @@ public class EditorsChoiceActivityController : ControllerBase
             response.Add("favourites", items);
             response.Add("autoplay", _config.EnableAutoplay);
             response.Add("showAutoplayButton", _config.ShowAutoplayButton);
+            response.Add("enableBackgroundTrailers", _config.EnableBackgroundTrailers);
             response.Add("autoplayInterval", _config.AutoplayInterval * 1000);
             response.Add("reduceImageSizes", _config.ReduceImageSize);
             response.Add("bannerHeight", _config.BannerHeight);

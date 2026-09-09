@@ -230,6 +230,14 @@
                         <div class="fieldDescription">How often, in seconds, the slider moves to the next item. Default is 10 seconds.</div>
                     </div>
 
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label class="emby-checkbox-label">
+                            <input is="emby-checkbox" type="checkbox" id="EnableBackgroundTrailers" name="EnableBackgroundTrailers" />
+                            <span class="checkboxLabel">Play local trailers in the background</span>
+                        </label>
+                        <div class="fieldDescription">When a slide is active, play its local Jellyfin trailer muted behind the item details. Remote trailers are not loaded.</div>
+                    </div>
+
                     <hr />
                     <h2>Filtering</h2>
 
@@ -418,6 +426,7 @@
                         $('#MinimumCriticRating').val(config.MinimumCriticRating);
                         $('#EnableAutoplay').first().prop('checked', config.EnableAutoplay);
                         $('#ShowAutoplayButton').first().prop('checked', config.ShowAutoplayButton);
+                        $('#EnableBackgroundTrailers').first().prop('checked', config.EnableBackgroundTrailers);
                         $('#AutoplayInterval').first().val(config.AutoplayInterval);
                         $("#NewTimeLimitSelect").val(config.NewTimeLimit);
                         $('#ShowRating').first().prop('checked', config.ShowRating);
@@ -566,6 +575,7 @@
                         config.FileTransformation = config.FrontendInjectionMethod == 'file-transformation';
                         config.EnableAutoplay = $('#EnableAutoplay').first().is(':checked');
                         config.ShowAutoplayButton = $('#ShowAutoplayButton').first().is(':checked');
+                        config.EnableBackgroundTrailers = $('#EnableBackgroundTrailers').first().is(':checked');
                         config.AutoplayInterval = $('#AutoplayInterval').first().val();
                         config.ShowRating = $('#ShowRating').first().is(':checked');
                         config.ShowDescription =  $('#ShowDesc').first().is(':checked');
