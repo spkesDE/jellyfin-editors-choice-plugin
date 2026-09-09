@@ -16,6 +16,8 @@ public class PluginConfiguration : BasePluginConfiguration
 
     public string Mode { get; set; } = "";
 
+    public string[] Modes { get; set; } = [];
+
     public int RandomMediaCount { get; set; } = 5;
 
     public float MinimumRating { get; set; } = 0.0f;

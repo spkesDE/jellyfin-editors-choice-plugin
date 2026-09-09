@@ -62,6 +62,12 @@ public class StartupService : IScheduledTask
             }
         }
 
+        // Preserve configurations created before combined modes were available.
+        if (_config.Modes == null || _config.Modes.Length == 0)
+        {
+            _config.Modes = [_config.Mode];
+        }
+
         // Get base path from network config
         try
         {
