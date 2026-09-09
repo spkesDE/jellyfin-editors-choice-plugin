@@ -31,6 +31,8 @@ public class PluginConfiguration : BasePluginConfiguration
 
     public bool EnableAutoplay { get; set; } = true;
 
+    public bool EnableBackgroundTrailers { get; set; } = false;
+
     public int AutoplayInterval { get; set; } = 10;
 
     public bool ShowPlayButton { get; set; } = true;
