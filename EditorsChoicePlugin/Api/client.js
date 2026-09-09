@@ -327,8 +327,8 @@ function buildRating(item) {
           </div>`;
 }
 
-function buildLogoOrTitle(item, reduceImageSizes) {
-    if (!item.hasLogo) return `<h1 class="editorsChoiceItemTitle">${item.name}</h1>`;
+function buildLogoOrTitle(item, reduceImageSizes, preferTextTitles) {
+    if (preferTextTitles || !item.hasLogo) return `<h1 class="editorsChoiceItemTitle">${item.name}</h1>`;
     const logoSize = reduceImageSizes ? "?width=300" : "";
     return `<img class="editorsChoiceItemLogo" src="../Items/${item.id}/Images/Logo/0${logoSize}" alt="${item.name}"/>`;
 }
@@ -376,7 +376,7 @@ function ensureSplideLoaded() {
 /* ===== Render ===== */
 function renderHeroSlide(item, data, baseUrl) {
     const rating = buildRating(item);
-    const logoOrTitle = buildLogoOrTitle(item, data.reduceImageSizes);
+    const logoOrTitle = buildLogoOrTitle(item, data.reduceImageSizes, data.preferTextTitles);
     const overview = buildOverview(item);
 
     let button = "";
@@ -414,7 +414,7 @@ function renderHeroSlide(item, data, baseUrl) {
 
 function renderNormalSlide(item, data, baseUrl) {
     const rating = buildRating(item);
-    const logoOrTitle = buildLogoOrTitle(item, data.reduceImageSizes);
+    const logoOrTitle = buildLogoOrTitle(item, data.reduceImageSizes, data.preferTextTitles);
     const overview = buildOverview(item);
 
     const bannerSize = buildBannerSizeParam(data.reduceImageSizes);

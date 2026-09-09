@@ -397,6 +397,7 @@ public class EditorsChoiceActivityController : ControllerBase
             response.Add("useHeroLayout", _config.UseHeroLayout);
             response.Add("transitionEffect", _config.TransitionEffect);
             response.Add("showPlayButton", _config.ShowPlayButton);
+            response.Add("preferTextTitles", _config.PreferTextTitles);
             response.Add("hideOnTvLayout", _config.HideOnTvLayout);
             response.Add("heroBackdropPosition", _config.HeroBackdropPosition);
             if (!string.IsNullOrEmpty(_config.Heading)) response.Add("heading", _config.Heading);

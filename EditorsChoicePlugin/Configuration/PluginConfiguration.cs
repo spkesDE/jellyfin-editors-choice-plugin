@@ -35,6 +35,8 @@ public class PluginConfiguration : BasePluginConfiguration
 
     public bool ShowPlayButton { get; set; } = true;
 
+    public bool PreferTextTitles { get; set; } = false;
+
     public string NewTimeLimit { get; set; } = "1month";
 
     public bool ShowRating { get; set; } = true;

@@ -293,6 +293,14 @@
                     <hr />
                     <h2>Display</h2>
 
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label class="emby-checkbox-label">
+                            <input is="emby-checkbox" type="checkbox" id="PreferTextTitles" name="PreferTextTitles" />
+                            <span class="checkboxLabel">Always show text titles instead of image logos</span>
+                        </label>
+                        <div class="fieldDescription">Use each item's Jellyfin title even when an image logo is available.</div>
+                    </div>
+
                     <div class="inputContainer">
                         <label class="inputLabel inputLabelUnfocused" for="Heading">Banner heading</label>
                         <input is="emby-input" type="text" id="Heading" name="Heading" />
@@ -442,6 +450,7 @@
                         $('#ShowRating').first().prop('checked', config.ShowRating);
                         $('#ShowDesc').first().prop('checked', config.ShowDescription);
                         $('#ShowPlayButton').first().prop('checked', config.ShowPlayButton);
+                        $('#PreferTextTitles').first().prop('checked', config.PreferTextTitles);
                         $('#ReduceImageSize').first().prop('checked', config.ReduceImageSize);
                         $("#BannerHeightSelect").val(config.BannerHeight);
                         $("#TransitionEffectSelect").val(config.TransitionEffect);
@@ -583,6 +592,7 @@
                         config.ShowRating = $('#ShowRating').first().is(':checked');
                         config.ShowDescription =  $('#ShowDesc').first().is(':checked');
                         config.ShowPlayButton = $('#ShowPlayButton').first().is(':checked');
+                        config.PreferTextTitles = $('#PreferTextTitles').first().is(':checked');
                         config.ReduceImageSize = $('#ReduceImageSize').first().is(':checked');
                         config.ShowPlayed = $('#ShowPlayed').first().is(':checked');
                         config.HideOnTvLayout = $('#HideOnTvLayout').first().is(':checked');
